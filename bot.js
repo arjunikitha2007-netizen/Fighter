@@ -1,50 +1,34 @@
 const mineflayer = require('mineflayer');
 
-console.log('🤖 Testing Minecraft Bot...');
-console.log('📦 Checking dependencies...');
+console.log('🤖 Starting 24/7 Minecraft Bot...');
 
-// Test if all modules are loaded
-try {
-    console.log('✅ mineflayer loaded successfully');
-    const { Vec3 } = require('vec3');
-    console.log('✅ vec3 loaded successfully');
-    console.log('✅ All dependencies loaded!');
-} catch (error) {
-    console.log('❌ Dependency error:', error.message);
-    process.exit(1);
-}
-
-// Simple bot configuration
 const botConfig = {
-    host: process.env.MINECRAFT_SERVER || 'kalikanundo123.aternos.me',
-    port: parseInt(process.env.MINECRAFT_PORT) || 57531,
-    username: process.env.MINECRAFT_USERNAME || 'TestBot',
+    host: 'kalikanundo123.aternos.me',
+    port: 57531,
+    username: 'TestBot',
     version: "1.20",
     auth: 'offline'
 };
 
 let bot = null;
 let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 5;
+const MAX_RECONNECT_ATTEMPTS = 3;
 
 function createBot() {
     console.log('🚀 Creating bot...');
     console.log(`🔗 Connecting to: ${botConfig.host}:${botConfig.port}`);
-    console.log(`👤 Username: ${botConfig.username}`);
-    console.log(`🎮 Version: ${botConfig.version}`);
 
-    // Create bot
     bot = mineflayer.createBot(botConfig);
 
-    // Basic event handlers
     bot.on('login', () => {
         console.log('✅ Bot logged in successfully!');
-        reconnectAttempts = 0; // Reset counter on successful login
+        reconnectAttempts = 0;
+        startKeepAlive();
     });
 
     bot.on('spawn', () => {
         console.log('✅ Bot spawned in world!');
-        console.log(`📍 Position: X=${bot.entity.position.x}, Y=${bot.entity.position.y}, Z=${bot.entity.position.z}`);
+        console.log('🔄 Starting 24/7 keep-alive activities...');
     });
 
     bot.on('error', (err) => {
@@ -53,49 +37,93 @@ function createBot() {
 
     bot.on('end', () => {
         console.log('🔌 Bot disconnected');
+        stopKeepAlive();
         handleReconnect();
     });
 
     bot.on('kicked', (reason) => {
-        console.log('🚫 Kicked from server:', JSON.stringify(reason));
+        console.log('🚫 Kicked:', JSON.stringify(reason));
+        stopKeepAlive();
         
-        if (reason && reason.text && reason.text.includes('throttled')) {
-            console.log('⚠️  Aternos throttling detected - increasing wait time');
-            // Special longer wait for throttling
-            reconnectAttempts = Math.max(reconnectAttempts, 2);
+        if (reason && JSON.stringify(reason).includes('throttled')) {
+            console.log('💡 Server might be offline. Starting Aternos...');
+            reconnectAttempts = 1; // Faster retry for offline server
         }
         handleReconnect();
     });
+}
 
-    console.log('🎯 Bot initialization complete!');
+let keepAliveInterval;
+
+function startKeepAlive() {
+    // Stop previous interval if exists
+    if (keepAliveInterval) clearInterval(keepAliveInterval);
+    
+    // Keep server alive with random activities
+    keepAliveInterval = setInterval(() => {
+        if (!bot || !bot.entity) return;
+        
+        try {
+            // Random movements to prevent AFK kick
+            const actions = [
+                () => bot.setControlState('jump', true),
+                () => bot.look(bot.entity.yaw + (Math.random() - 0.5), bot.entity.pitch),
+                () => bot.chat(''), // Empty chat to show activity
+            ];
+            
+            const randomAction = actions[Math.floor(Math.random() * actions.length)];
+            randomAction();
+            
+            // Stop jump after 200ms
+            if (randomAction === actions[0]) {
+                setTimeout(() => {
+                    if (bot) bot.setControlState('jump', false);
+                }, 200);
+            }
+            
+            console.log('🔄 Keep-alive activity performed');
+            
+        } catch (error) {
+            console.log('⚠️ Keep-alive error:', error.message);
+        }
+    }, 30000); // Every 30 seconds
+}
+
+function stopKeepAlive() {
+    if (keepAliveInterval) {
+        clearInterval(keepAliveInterval);
+        keepAliveInterval = null;
+    }
 }
 
 function handleReconnect() {
     if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.log('🛑 Max reconnection attempts reached. Stopping for 10 minutes.');
-        console.log('💡 Make sure your Aternos server is STARTED and online');
-        
-        // Wait 10 minutes before trying again
+        console.log('🛑 Max attempts. Waiting 5 minutes...');
         setTimeout(() => {
             reconnectAttempts = 0;
             createBot();
-        }, 600000);
+        }, 300000);
         return;
     }
 
     reconnectAttempts++;
     
-    // Much longer delays for Aternos: 2 min, 5 min, 10 min, 15 min, 20 min
-    const delays = [120000, 300000, 600000, 900000, 1200000];
-    const delay = delays[reconnectAttempts - 1] || 1200000;
+    // Shorter delays for 24/7 operation
+    const delays = [60000, 120000, 180000]; // 1min, 2min, 3min
+    const delay = delays[reconnectAttempts - 1] || 180000;
     
-    console.log(`🔄 Reconnecting in ${delay/60000} minutes... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
-    console.log('💡 TIP: Start your Aternos server manually at aternos.org');
+    console.log(`🔄 Reconnecting in ${delay/1000} seconds... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
     
     setTimeout(() => {
         createBot();
     }, delay);
 }
 
-// Start the bot initially
+// Start immediately
 createBot();
+
+// Handle process errors
+process.on('uncaughtException', (error) => {
+    console.log('⚠️ Unexpected error:', error.message);
+    createBot(); // Restart on crash
+});
