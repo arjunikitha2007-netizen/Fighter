@@ -16,7 +16,7 @@ const botOptions = {
   host: process.env.MINECRAFT_HOST || "kalikanundo123.aternos.me",
   port: parseInt(process.env.MINECRAFT_PORT, 10) || 57531,
   username: process.env.MINECRAFT_USERNAME || "AGENT",
-  version: process.env.MINECRAFT_VERSION || "1.20,
+  version: process.env.MINECRAFT_VERSION || "1.20",
   auth: process.env.MINECRAFT_AUTH || "offline",
   profilesFolder: "./auth-cache",
   onMsaCode: (data) => {
