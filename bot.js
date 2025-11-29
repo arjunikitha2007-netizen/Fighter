@@ -1,31 +1,55 @@
+// Add this health check server at the top
+const http = require('http');
+
+// Health check server for Render
+const server = http.createServer((req, res) => {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ 
+      status: 'ok', 
+      service: 'Minecraft Bot',
+      timestamp: new Date().toISOString()
+    }));
+  } else {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Minecraft Bot is running');
+  }
+});
+
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+  console.log(`✅ Health check server running on port ${PORT}`);
+});
+
+// Your existing bot code
 const mineflayer = require('mineflayer');
 
 console.log('🤖 Starting 24/7 Minecraft Bot...');
 
 const botConfig = {
-    host: 'kalikanundo123.aternos.me',
-    port: 57531,
-    username: 'TestBot',
+    host: process.env.MINECRAFT_SERVER || 'kalikanundo123.aternos.me',
+    port: parseInt(process.env.MINECRAFT_PORT) || 57531,
+    username: process.env.MINECRAFT_USERNAME || 'TestBot',
     version: "1.20",
     auth: 'offline'
 };
 
 let bot = null;
+let reconnectAttempts = 0;
 
 function createBot() {
-    console.log('🚀 Attempting to connect to Aternos server...');
-    console.log('💡 Make sure server is STARTED at aternos.org');
+    console.log('🚀 Creating bot...');
+    console.log(`🔗 Connecting to: ${botConfig.host}:${botConfig.port}`);
 
     bot = mineflayer.createBot(botConfig);
 
     bot.on('login', () => {
         console.log('🎉 SUCCESS! Bot connected and logged in!');
-        console.log('✅ Server is ONLINE');
+        reconnectAttempts = 0;
     });
 
     bot.on('spawn', () => {
         console.log('✅ Bot spawned in world!');
-        console.log('🔄 24/7 keep-alive activated');
     });
 
     bot.on('error', (err) => {
@@ -34,20 +58,20 @@ function createBot() {
 
     bot.on('end', () => {
         console.log('🔌 Disconnected - Server might have stopped');
-        setTimeout(createBot, 60000); // Retry in 1 minute
+        setTimeout(createBot, 60000);
     });
 
     bot.on('kicked', (reason) => {
         console.log('🚫 Kicked:', JSON.stringify(reason));
         console.log('💡 Server is likely OFFLINE - Go to aternos.org and START it');
-        setTimeout(createBot, 120000); // Retry in 2 minutes
+        setTimeout(createBot, 120000);
     });
 }
 
-// Start bot and keep retrying forever
+// Start bot
 createBot();
 
 // Keep process alive
 setInterval(() => {
     console.log('⏰ Bot process active - Waiting for server to come online...');
-}, 300000); // Log every 5 minutes
+}, 300000);
