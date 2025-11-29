@@ -23,30 +23,62 @@ const botConfig = {
     auth: 'offline'
 };
 
-console.log('🚀 Creating bot...');
-console.log(`🔗 Connecting to: ${botConfig.host}:${botConfig.port}`);
-console.log(`👤 Username: ${botConfig.username}`);
-console.log(`🎮 Version: ${botConfig.version}`);
+let bot = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
 
-// Create bot
-const bot = mineflayer.createBot(botConfig);
+function createBot() {
+    console.log('🚀 Creating bot...');
+    console.log(`🔗 Connecting to: ${botConfig.host}:${botConfig.port}`);
+    console.log(`👤 Username: ${botConfig.username}`);
+    console.log(`🎮 Version: ${botConfig.version}`);
 
-// Basic event handlers
-bot.on('login', () => {
-    console.log('✅ Bot logged in successfully!');
-});
+    // Create bot
+    bot = mineflayer.createBot(botConfig);
 
-bot.on('spawn', () => {
-    console.log('✅ Bot spawned in world!');
-    console.log(`📍 Position: X=${bot.entity.position.x}, Y=${bot.entity.position.y}, Z=${bot.entity.position.z}`);
-});
+    // Basic event handlers
+    bot.on('login', () => {
+        console.log('✅ Bot logged in successfully!');
+        reconnectAttempts = 0; // Reset counter on successful login
+    });
 
-bot.on('error', (err) => {
-    console.log('❌ Bot error:', err.message);
-});
+    bot.on('spawn', () => {
+        console.log('✅ Bot spawned in world!');
+        console.log(`📍 Position: X=${bot.entity.position.x}, Y=${bot.entity.position.y}, Z=${bot.entity.position.z}`);
+    });
 
-bot.on('end', () => {
-    console.log('🔌 Bot disconnected');
-});
+    bot.on('error', (err) => {
+        console.log('❌ Bot error:', err.message);
+    });
 
-console.log('🎯 Bot initialization complete!');
+    bot.on('end', () => {
+        console.log('🔌 Bot disconnected');
+        handleReconnect();
+    });
+
+    bot.on('kicked', (reason) => {
+        console.log('🚫 Kicked from server:', reason);
+        handleReconnect();
+    });
+
+    console.log('🎯 Bot initialization complete!');
+}
+
+function handleReconnect() {
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        console.log('🛑 Max reconnection attempts reached. Stopping.');
+        return;
+    }
+
+    reconnectAttempts++;
+    const delay = Math.min(30000 * reconnectAttempts, 120000); // 30s, 60s, 90s, max 120s
+    
+    console.log(`🔄 Reconnecting in ${delay/1000}s... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+    
+    setTimeout(() => {
+        createBot();
+    }, delay);
+}
+
+// Start the bot initially
+createBot();
