@@ -6,12 +6,12 @@ let isConnected = false;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
-// Step 1: Define bot configuration
+// Step 1: Define bot configuration for Minecraft 1.20
 const botConfig = {
     host: process.env.MINECRAFT_SERVER || 'kalikanundo123.aternos.me',
     port: parseInt(process.env.MINECRAFT_PORT) || 57531,
     username: process.env.MINECRAFT_USERNAME || 'Aternos',
-    version: process.env.MINECRAFT_VERSION || "1.20.1",
+    version: "1.20",  // Changed to 1.20
     auth: 'offline',
     checkTimeoutInterval: 30000,
     session: false,
@@ -27,6 +27,7 @@ function createBot() {
 
         console.log(`Authentication mode: ${botConfig.auth}`);
         console.log(`Connecting to ${botConfig.host}:${botConfig.port} as ${botConfig.username}`);
+        console.log(`Minecraft version: ${botConfig.version}`);
 
         // Step 3: Connection event handlers
         bot.on('login', () => {
