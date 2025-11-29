@@ -6,67 +6,82 @@ let isConnected = false;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
+// Step 1: Define bot configuration
+const botConfig = {
+    host: process.env.MINECRAFT_SERVER || 'kalikanundo123.aternos.me',
+    port: parseInt(process.env.MINECRAFT_PORT) || 57531,
+    username: process.env.MINECRAFT_USERNAME || 'Aternos',
+    version: process.env.MINECRAFT_VERSION || "1.20.1",
+    auth: 'offline',
+    checkTimeoutInterval: 30000,
+    session: false,
+    closeTimeout: 30000
+};
+
 function createBot() {
     console.log('🤖 Starting Human-Like Minecraft Bot...');
     
-    bot = mineflayer.createBot({
-        host: process.env.MINECRAFT_SERVER || 'kalikanundo123.aternos.me',
-        port: parseInt(process.env.MINECRAFT_PORT) || 57531,
-        username: process.env.MINECRAFT_USERNAME || 'Aternos',
-        version: process.env.MINECRAFT_VERSION || "1.20.1",
-        auth: 'offline',
-        checkTimeoutInterval: 30000,
-        session: false,
-        closeTimeout: 30000
-    });
+    try {
+        // Step 2: Create bot with configuration
+        bot = mineflayer.createBot(botConfig);
 
-    console.log(`Authentication mode: ${bot.auth}`);
-    console.log(`Connecting to ${bot.options.host}:${bot.options.port} as ${bot.options.username}`);
+        console.log(`Authentication mode: ${botConfig.auth}`);
+        console.log(`Connecting to ${botConfig.host}:${botConfig.port} as ${botConfig.username}`);
 
-    // Connection event handlers
-    bot.on('login', () => {
-        console.log('✅ Bot logged in successfully!');
-        isConnected = true;
-        reconnectAttempts = 0;
-    });
+        // Step 3: Connection event handlers
+        bot.on('login', () => {
+            console.log('✅ Bot logged in successfully!');
+            isConnected = true;
+            reconnectAttempts = 0;
+        });
 
-    bot.on('end', () => {
-        console.log('🔌 Bot disconnected');
-        isConnected = false;
-        handleReconnect();
-    });
-
-    bot.on('error', (err) => {
-        console.log('❌ Bot error:', err.message);
-        isConnected = false;
-        
-        if (err.code === 'EPIPE' || err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED') {
-            console.log('🌐 Connection lost, attempting reconnect...');
+        bot.on('end', () => {
+            console.log('🔌 Bot disconnected');
+            isConnected = false;
             handleReconnect();
-        }
-    });
+        });
 
-    // Bot event handlers
-    bot.on('spawn', () => {
-        if (!isBotValid()) return;
-        
-        console.log('✅ Bot spawned successfully!');
-        console.log(`📍 Position: X=${bot.entity.position.x.toFixed(1)}, Y=${bot.entity.position.y.toFixed(1)}, Z=${bot.entity.position.z.toFixed(1)}`);
-        console.log(`🎮 Game Mode: ${bot.game.gameMode}`);
-        
-        setTimeout(() => {
-            if (isBotValid()) {
-                switchToCreative();
+        bot.on('error', (err) => {
+            console.log('❌ Bot error:', err.message);
+            isConnected = false;
+            
+            if (err.code === 'EPIPE' || err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED') {
+                console.log('🌐 Connection lost, attempting reconnect...');
+                handleReconnect();
             }
-        }, 3000);
-    });
+        });
 
-    bot.on('game', () => {
-        if (!isBotValid()) return;
-        console.log(`🎮 Game Mode: ${bot.game.gameMode}`);
-    });
+        // Step 4: Bot event handlers
+        bot.on('spawn', () => {
+            if (!isBotValid()) return;
+            
+            console.log('✅ Bot spawned successfully!');
+            console.log(`📍 Position: X=${bot.entity.position.x.toFixed(1)}, Y=${bot.entity.position.y.toFixed(1)}, Z=${bot.entity.position.z.toFixed(1)}`);
+            
+            if (bot.game) {
+                console.log(`🎮 Game Mode: ${bot.game.gameMode}`);
+            }
+            
+            setTimeout(() => {
+                if (isBotValid()) {
+                    switchToCreative();
+                }
+            }, 3000);
+        });
 
-    console.log('🚀 Bot initialized and ready!');
+        bot.on('game', () => {
+            if (!isBotValid()) return;
+            if (bot.game) {
+                console.log(`🎮 Game Mode: ${bot.game.gameMode}`);
+            }
+        });
+
+        console.log('🚀 Bot initialized and ready!');
+
+    } catch (error) {
+        console.log('❌ Failed to create bot:', error.message);
+        handleReconnect();
+    }
 }
 
 function isBotValid() {
@@ -99,7 +114,7 @@ function handleReconnect() {
 function switchToCreative() {
     if (!isBotValid()) return;
     
-    if (bot.game.gameMode !== 'creative') {
+    if (bot.game && bot.game.gameMode !== 'creative') {
         console.log('⚠️  Detected Survival mode - switching to Creative...');
         bot.chat('/gamemode creative');
         
@@ -109,7 +124,7 @@ function switchToCreative() {
             }
         }, 2000);
     } else {
-        console.log('✅ Already in Creative mode');
+        console.log('✅ Already in Creative mode or game info not available');
         startBotActivities();
     }
 }
@@ -190,21 +205,23 @@ function moveToLocation(x, y, z, locationNumber) {
         const distance = bot.entity.position.distanceTo(new Vec3(x, y, z));
         console.log(`  → Moving to location ${locationNumber}/4 (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)}) - ${distance.toFixed(1)} blocks away`);
         
-        bot.navigate.to(new Vec3(x, y, z), {
-            timeout: 15000,
-            range: 2,
-            physics: {
-                maxSpeed: 0.8,
-                jumpSpeed: 0.6
-            }
-        });
-        
-        // Stop navigation after 10 seconds to prevent getting stuck
-        setTimeout(() => {
-            if (isBotValid() && bot.navigate) {
-                bot.navigate.stop();
-            }
-        }, 10000);
+        if (bot.navigate) {
+            bot.navigate.to(new Vec3(x, y, z), {
+                timeout: 15000,
+                range: 2,
+                physics: {
+                    maxSpeed: 0.8,
+                    jumpSpeed: 0.6
+                }
+            });
+            
+            // Stop navigation after 10 seconds to prevent getting stuck
+            setTimeout(() => {
+                if (isBotValid() && bot.navigate) {
+                    bot.navigate.stop();
+                }
+            }, 10000);
+        }
         
     } catch (error) {
         console.log('❌ Error during movement:', error.message);
@@ -225,7 +242,7 @@ setInterval(() => {
     }
 }, 15000);
 
-// Start the bot initially
+// Step 5: Start the bot
 createBot();
 
 // Graceful shutdown handling
