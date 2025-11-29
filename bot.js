@@ -11,119 +11,43 @@ const botConfig = {
 };
 
 let bot = null;
-let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 3;
 
 function createBot() {
-    console.log('🚀 Creating bot...');
-    console.log(`🔗 Connecting to: ${botConfig.host}:${botConfig.port}`);
+    console.log('🚀 Attempting to connect to Aternos server...');
+    console.log('💡 Make sure server is STARTED at aternos.org');
 
     bot = mineflayer.createBot(botConfig);
 
     bot.on('login', () => {
-        console.log('✅ Bot logged in successfully!');
-        reconnectAttempts = 0;
-        startKeepAlive();
+        console.log('🎉 SUCCESS! Bot connected and logged in!');
+        console.log('✅ Server is ONLINE');
     });
 
     bot.on('spawn', () => {
         console.log('✅ Bot spawned in world!');
-        console.log('🔄 Starting 24/7 keep-alive activities...');
+        console.log('🔄 24/7 keep-alive activated');
     });
 
     bot.on('error', (err) => {
-        console.log('❌ Bot error:', err.message);
+        console.log('❌ Connection error:', err.message);
     });
 
     bot.on('end', () => {
-        console.log('🔌 Bot disconnected');
-        stopKeepAlive();
-        handleReconnect();
+        console.log('🔌 Disconnected - Server might have stopped');
+        setTimeout(createBot, 60000); // Retry in 1 minute
     });
 
     bot.on('kicked', (reason) => {
         console.log('🚫 Kicked:', JSON.stringify(reason));
-        stopKeepAlive();
-        
-        if (reason && JSON.stringify(reason).includes('throttled')) {
-            console.log('💡 Server might be offline. Starting Aternos...');
-            reconnectAttempts = 1; // Faster retry for offline server
-        }
-        handleReconnect();
+        console.log('💡 Server is likely OFFLINE - Go to aternos.org and START it');
+        setTimeout(createBot, 120000); // Retry in 2 minutes
     });
 }
 
-let keepAliveInterval;
-
-function startKeepAlive() {
-    // Stop previous interval if exists
-    if (keepAliveInterval) clearInterval(keepAliveInterval);
-    
-    // Keep server alive with random activities
-    keepAliveInterval = setInterval(() => {
-        if (!bot || !bot.entity) return;
-        
-        try {
-            // Random movements to prevent AFK kick
-            const actions = [
-                () => bot.setControlState('jump', true),
-                () => bot.look(bot.entity.yaw + (Math.random() - 0.5), bot.entity.pitch),
-                () => bot.chat(''), // Empty chat to show activity
-            ];
-            
-            const randomAction = actions[Math.floor(Math.random() * actions.length)];
-            randomAction();
-            
-            // Stop jump after 200ms
-            if (randomAction === actions[0]) {
-                setTimeout(() => {
-                    if (bot) bot.setControlState('jump', false);
-                }, 200);
-            }
-            
-            console.log('🔄 Keep-alive activity performed');
-            
-        } catch (error) {
-            console.log('⚠️ Keep-alive error:', error.message);
-        }
-    }, 30000); // Every 30 seconds
-}
-
-function stopKeepAlive() {
-    if (keepAliveInterval) {
-        clearInterval(keepAliveInterval);
-        keepAliveInterval = null;
-    }
-}
-
-function handleReconnect() {
-    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.log('🛑 Max attempts. Waiting 5 minutes...');
-        setTimeout(() => {
-            reconnectAttempts = 0;
-            createBot();
-        }, 300000);
-        return;
-    }
-
-    reconnectAttempts++;
-    
-    // Shorter delays for 24/7 operation
-    const delays = [60000, 120000, 180000]; // 1min, 2min, 3min
-    const delay = delays[reconnectAttempts - 1] || 180000;
-    
-    console.log(`🔄 Reconnecting in ${delay/1000} seconds... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
-    
-    setTimeout(() => {
-        createBot();
-    }, delay);
-}
-
-// Start immediately
+// Start bot and keep retrying forever
 createBot();
 
-// Handle process errors
-process.on('uncaughtException', (error) => {
-    console.log('⚠️ Unexpected error:', error.message);
-    createBot(); // Restart on crash
-});
+// Keep process alive
+setInterval(() => {
+    console.log('⏰ Bot process active - Waiting for server to come online...');
+}, 300000); // Log every 5 minutes
