@@ -25,7 +25,7 @@ const botConfig = {
 
 let bot = null;
 let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 10;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 function createBot() {
     console.log('🚀 Creating bot...');
@@ -57,7 +57,13 @@ function createBot() {
     });
 
     bot.on('kicked', (reason) => {
-        console.log('🚫 Kicked from server:', reason);
+        console.log('🚫 Kicked from server:', JSON.stringify(reason));
+        
+        if (reason && reason.text && reason.text.includes('throttled')) {
+            console.log('⚠️  Aternos throttling detected - increasing wait time');
+            // Special longer wait for throttling
+            reconnectAttempts = Math.max(reconnectAttempts, 2);
+        }
         handleReconnect();
     });
 
@@ -66,14 +72,25 @@ function createBot() {
 
 function handleReconnect() {
     if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.log('🛑 Max reconnection attempts reached. Stopping.');
+        console.log('🛑 Max reconnection attempts reached. Stopping for 10 minutes.');
+        console.log('💡 Make sure your Aternos server is STARTED and online');
+        
+        // Wait 10 minutes before trying again
+        setTimeout(() => {
+            reconnectAttempts = 0;
+            createBot();
+        }, 600000);
         return;
     }
 
     reconnectAttempts++;
-    const delay = Math.min(30000 * reconnectAttempts, 120000); // 30s, 60s, 90s, max 120s
     
-    console.log(`🔄 Reconnecting in ${delay/1000}s... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+    // Much longer delays for Aternos: 2 min, 5 min, 10 min, 15 min, 20 min
+    const delays = [120000, 300000, 600000, 900000, 1200000];
+    const delay = delays[reconnectAttempts - 1] || 1200000;
+    
+    console.log(`🔄 Reconnecting in ${delay/60000} minutes... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+    console.log('💡 TIP: Start your Aternos server manually at aternos.org');
     
     setTimeout(() => {
         createBot();
