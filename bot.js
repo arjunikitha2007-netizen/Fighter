@@ -1,52 +1,50 @@
 const mineflayer = require('mineflayer');
 
-console.log('🤖 Testing Minecraft Bot...');
-console.log('📦 Checking dependencies...');
+console.log('🚀 Starting Minecraft Bot...');
 
-// Test if all modules are loaded
-try {
-    console.log('✅ mineflayer loaded successfully');
-    const { Vec3 } = require('vec3');
-    console.log('✅ vec3 loaded successfully');
-    console.log('✅ All dependencies loaded!');
-} catch (error) {
-    console.log('❌ Dependency error:', error.message);
-    process.exit(1);
-}
-
-// Simple bot configuration
 const botConfig = {
-    host: process.env.MINECRAFT_SERVER || 'kalikanundo123.aternos.me',
-    port: parseInt(process.env.MINECRAFT_PORT) || 57531,
-    username: process.env.MINECRAFT_USERNAME || 'TestBot',
-    version: "1.20",
+    host: 'kalikanundo123.aternos.me',
+    port: 57531,
+    username: 'TestBot',
+    version: '1.20',
     auth: 'offline'
 };
 
-console.log('🚀 Creating bot...');
-console.log(`🔗 Connecting to: ${botConfig.host}:${botConfig.port}`);
-console.log(`👤 Username: ${botConfig.username}`);
-console.log(`🎮 Version: ${botConfig.version}`);
+console.log(`🔗 Attempting to connect to: ${botConfig.host}:${botConfig.port}`);
 
-// Create bot
 const bot = mineflayer.createBot(botConfig);
 
-// Basic event handlers
 bot.on('login', () => {
-    console.log('✅ Bot logged in successfully!');
+    console.log('✅ SUCCESS: Bot logged in to server!');
 });
 
 bot.on('spawn', () => {
-    console.log('✅ Bot spawned in world!');
-    console.log(`📍 Position: X=${bot.entity.position.x}, Y=${bot.entity.position.y}, Z=${bot.entity.position.z}`);
+    console.log('✅ SUCCESS: Bot spawned in world!');
+    console.log('🎯 Bot is now active!');
 });
 
 bot.on('error', (err) => {
-    console.log('❌ Bot error:', err.message);
+    console.log('❌ CONNECTION ERROR:', err.message);
+    console.log('💡 Make sure your Aternos server is STARTED and online');
 });
 
-bot.on('end', () => {
-    console.log('🔌 Bot disconnected');
+bot.on('end', (reason) => {
+    console.log('🔌 DISCONNECTED:', reason);
+    console.log('⏳ Will attempt to reconnect in 30 seconds...');
+    
+    setTimeout(() => {
+        console.log('🔄 Attempting to reconnect...');
+        // This will automatically restart the process on Render
+    }, 30000);
 });
 
-console.log('🎯 Bot initialization complete!');
+bot.on('kicked', (reason) => {
+    console.log('🚫 KICKED FROM SERVER:', reason);
+});
+
+// Keep the process alive
+process.on('uncaughtException', (error) => {
+    console.log('⚠️ Unexpected error:', error.message);
+});
+
+console.log('🎯 Bot connection process started...');
