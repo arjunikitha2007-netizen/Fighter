@@ -4,11 +4,13 @@
   "description": "Minecraft bot for Aternos",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node bot.js",
+    "install-deps": "npm install mineflayer vec3 debug"
   },
   "dependencies": {
     "mineflayer": "^4.18.0",
-    "vec3": "^0.1.8"
+    "vec3": "^0.1.8",
+    "debug": "^4.3.4"
   },
   "engines": {
     "node": ">=16.0.0"
